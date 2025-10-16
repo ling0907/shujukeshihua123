@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据可视化平台 - CSV图表生成器</title>
+    <script src="https://unpkg.com/antd@5.12.8/dist/antd.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/antd@5.12.8/dist/reset.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 24px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 16px;
+        }
+        .upload-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #fafafa;
+            border-radius: 6px;
+            border: 1px dashed #d9d9d9;
+        }
+        .chart-container {
+            height: 500px;
+            margin: 24px 0;
+        }
+        .data-table {
+            margin-top: 24px;
+        }
+        .filter-section {
+            margin: 16px 0;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        .file-list {
+            margin-top: 16px;
+        }
+        .file-item {
+            padding: 8px 12px;
+            margin: 4px 0;
+            background: #e6f7ff;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #91d5ff;
+        }
+        .file-item:hover {
+            background: #bae7ff;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { Upload, Button, Card, Select, Table, Space, Divider, message, Row, Col } = antd;
+        const { UploadOutlined, BarChartOutlined, LineChartOutlined, PieChartOutlined } = antd.icons;
+
+        // 预加载的CSV文件数据
+        const predefinedDatasets = {
+            '气温数据.csv': `天数,最高气温,最低气温
+4,32,19
+5,33,19
+6,34,20
+7,34,22
+8,33,22
+9,31,21
+10,30,22
+11,29,16
+12,30,18
+13,29,18
+14,26,17
+15,23,14
+16,21,15
+17,25,16
+18,31,16`,
+
+            '阿里巴巴GMV数据.csv': `财年,GMV(亿元)
+FY2013,10770
+FY2014,16780
+FY2015,24440
+FY2016,30920
+FY2017,37670
+FY2018,48200
+FY2019,57270`,
+
+            '网购替代率数据.csv': `商品种类,替代率
+家政、家教、保姆等生活服务,0.959
+飞机票、火车票,0.951
+家具,0.935
+手机、手机配件,0.924
+计算机及其配套产品,0.893
+汽车用品,0.892
+通信充值、游戏充值,0.865
+个人护理用品,0.863
+书报杂志及音像制品,0.860
+餐饮、旅游、住宿,0.856
+家用电器,0.854
+食品、饮料、烟酒、保健品,0.835
+家庭日杂用品,0.826
+保险、演出票务,0.816
+服装、鞋帽、家用纺织品,0.798
+数码产品,0.765
+其他商品和服务,0.763
+工艺品、收藏品,0.670`,
+
+            '物流费用数据.csv': `月份,公司A费用,公司B费用,公司C费用
+1,198,203,185
+2,215,236,205
+3,245,200,226
+4,222,236,199
+5,200,269,238
+6,236,216,200
+7,201,298,250
+8,253,333,209
+9,236,301,246
+10,200,349,219
+11,266,360,253
+12,290,368,288`,
+
+            '汽车速度制动距离数据.csv': `速度(km/h),制动距离(m)
+10,0.5
+20,2.0
+30,4.4
+40,7.9
+50,12.3
+60,17.7
+70,24.1
+80,31.5
+90,39.9
+100,49.2
+110,59.5
+120,70.8
+130,83.1
+140,96.4
+150,110.7
+160,126.0
+170,142.2
+180,159.4
+190,177.6
+200,196.8`,
+
+            '细根生物量数据.csv': `季节,树种1生物量,树种2生物量,树种3生物量,树种4生物量,树种1误差,树种2误差,树种3误差,树种4误差
+春季,2.04,1.69,4.65,3.39,0.16,0.27,0.34,0.23
+夏季,1.57,1.61,4.99,2.33,0.08,0.14,0.32,0.23
+秋季,1.63,1.64,4.94,4.10,0.10,0.14,0.29,0.39`
+        };
+
+        // CSV解析函数
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n').filter(line => line.trim());
+            if (lines.length < 2) return { headers: [], data: [] };
+            
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = lines.slice(1).map(line => {
+                const values = line.split(',').map(v => v.trim());
+                const row = {};
+                headers.forEach((header, index) => {
+                    const value = values[index];
+                    row[header] = isNaN(value) ? value : parseFloat(value);
+                });
+                return row;
+            });
+            
+            return { headers, data };
+        }
+
+        // 图表生成函数
+        function generateChart(chartType, data, xAxis, yAxis, series = []) {
+            const chart = echarts.init(document.getElementById('chart-container'));
+            
+            let option = {
+                title: {
+                    text: `${chartType} - ${xAxis} vs ${yAxis}`,
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                legend: {
+                    data: series.length ? series : [yAxis],
+                    top: 30
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                toolbox: {
+                    feature: {
+                        saveAsImage: {}
+                    }
+                }
+            };
+
+            switch(chartType) {
+                case '折线图':
+                    option.xAxis = {
+                        type: 'category',
+                        data: data.map(item => item[xAxis])
+                    };
+                    option.yAxis = { type: 'value' };
+                    option.series = series.map(s => ({
+                        name: s,
+                        type: 'line',
+                        data: data.map(item => item[s]),
+                        smooth: true
+                    }));
+                    break;
+
+                case '柱状图':
+                    option.xAxis = {
+                        type: 'category',
+                        data: data.map(item => item[xAxis])
+                    };
+                    option.yAxis = { type: 'value' };
+                    option.series = series.map(s => ({
+                        name: s,
+                        type: 'bar',
+                        data: data.map(item => item[s])
+                    }));
+                    break;
+
+                case '饼图':
+                    option.series = [{
+                        type: 'pie',
+                        radius: '50%',
+                        data: data.map(item => ({
+                            name: item[xAxis],
+                            value: item[yAxis]
+                        })),
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }];
+                    break;
+
+                case '散点图':
+                    option.xAxis = { type: 'value' };
+                    option.yAxis = { type: 'value' };
+                    option.series = [{
+                        type: 'scatter',
+                        data: data.map(item => [item[xAxis], item[yAxis]]),
+                        symbolSize: 20
+                    }];
+                    break;
+            }
+
+            chart.setOption(option);
+            return chart;
+        }
+
+        function DataVisualizationApp() {
+            const [currentData, setCurrentData] = useState(null);
+            const [chartType, setChartType] = useState('折线图');
+            const [xAxis, setXAxis] = useState('');
+            const [yAxis, setYAxis] = useState('');
+            const [availableSeries, setAvailableSeries] = useState([]);
+            const [selectedSeries, setSelectedSeries] = useState([]);
+
+            // 加载预定义数据集
+            const loadPredefinedDataset = (filename) => {
+                const csvText = predefinedDatasets[filename];
+                if (csvText) {
+                    const parsedData = parseCSV(csvText);
+                    setCurrentData(parsedData);
+                    message.success(`已加载数据集: ${filename}`);
+                }
+            };
+
+            // 处理文件上传
+            const handleFileUpload = (file) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const csvText = e.target.result;
+                    const parsedData = parseCSV(csvText);
+                    setCurrentData(parsedData);
+                    message.success('文件上传成功！');
+                };
+                reader.readAsText(file);
+                return false; // 阻止默认上传行为
+            };
+
+            // 当数据变化时更新可用字段
+            useEffect(() => {
+                if (currentData && currentData.headers) {
+                    setAvailableSeries(currentData.headers);
+                    setXAxis(currentData.headers[0] || '');
+                    setYAxis(currentData.headers[1] || '');
+                    setSelectedSeries(currentData.headers.slice(1));
+                }
+            }, [currentData]);
+
+            // 生成图表
+            const handleGenerateChart = () => {
+                if (!currentData || !xAxis || !yAxis) {
+                    message.error('请选择X轴和Y轴数据');
+                    return;
+                }
+
+                setTimeout(() => {
+                    generateChart(chartType, currentData.data, xAxis, yAxis, selectedSeries);
+                }, 100);
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>📊 数据可视化平台</h1>
+                        <p>上传CSV文件或选择预定义数据集，快速生成交互式图表</p>
+                    </div>
+
+                    <Row gutter={[16, 16]}>
+                        <Col span={8}>
+                            <Card title="数据源" size="small">
+                                <div className="upload-section">
+                                    <Upload
+                                        accept=".csv"
+                                        beforeUpload={handleFileUpload}
+                                        showUploadList={false}
+                                    >
+                                        <Button icon={<UploadOutlined />} type="primary">
+                                            上传CSV文件
+                                        </Button>
+                                    </Upload>
+                                    
+                                    <div className="file-list">
+                                        <p>预定义数据集:</p>
+                                        {Object.keys(predefinedDatasets).map(filename => (
+                                            <div 
+                                                key={filename}
+                                                className="file-item"
+                                                onClick={() => loadPredefinedDataset(filename)}
+                                            >
+                                                {filename}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card title="图表配置" size="small" style={{ marginTop: 16 }}>
+                                <Space direction="vertical" style={{ width: '100%' }}>
+                                    <div>
+                                        <label>图表类型:</label>
+                                        <Select 
+                                            value={chartType} 
+                                            onChange={setChartType}
+                                            style={{ width: '100%', marginTop: 8 }}
+                                        >
+                                            <Select.Option value="折线图">📈 折线图</Select.Option>
+                                            <Select.Option value="柱状图">📊 柱状图</Select.Option>
+                                            <Select.Option value="饼图">🥧 饼图</Select.Option>
+                                            <Select.Option value="散点图">🔵 散点图</Select.Option>
+                                        </Select>
+                                    </div>
+
+                                    <div>
+                                        <label>X轴数据:</label>
+                                        <Select 
+                                            value={xAxis} 
+                                            onChange={setXAxis}
+                                            style={{ width: '100%', marginTop: 8 }}
+                                            options={availableSeries.map(col => ({ value: col, label: col }))}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label>Y轴数据:</label>
+                                        <Select 
+                                            value={yAxis} 
+                                            onChange={setYAxis}
+                                            style={{ width: '100%', marginTop: 8 }}
+                                            options={availableSeries.map(col => ({ value: col, label: col }))}
+                                        />
+                                    </div>
+
+                                    {chartType !== '饼图' && (
+                                        <div>
+                                            <label>数据系列:</label>
+                                            <Select 
+                                                mode="multiple"
+                                                value={selectedSeries}
+                                                onChange={setSelectedSeries}
+                                                style={{ width: '100%', marginTop: 8 }}
+                                                options={availableSeries.map(col => ({ value: col, label: col }))}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <Button 
+                                        type="primary" 
+                                        icon={<BarChartOutlined />}
+                                        onClick={handleGenerateChart}
+                                        style={{ width: '100%', marginTop: 16 }}
+                                    >
+                                        生成图表
+                                    </Button>
+                                </Space>
+                            </Card>
+                        </Col>
+
+                        <Col span={16}>
+                            <Card title="图表展示" size="small">
+                                <div id="chart-container" className="chart-container"></div>
+                            </Card>
+
+                            {currentData && (
+                                <Card title="数据表格" size="small" style={{ marginTop: 16 }}>
+                                    <Table 
+                                        dataSource={currentData.data}
+                                        columns={currentData.headers.map(header => ({
+                                            title: header,
+                                            dataIndex: header,
+                                            key: header
+                                        }))}
+                                        pagination={{ pageSize: 5 }}
+                                        size="small"
+                                    />
+                                </Card>
+                            )}
+                        </Col>
+                    </Row>
+                </div>
+            );
+        }
+
+        // 渲染应用
+        ReactDOM.render(<DataVisualizationApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>

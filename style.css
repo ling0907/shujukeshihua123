@@ -1,0 +1,87 @@
+body {
+    font-family: 'Microsoft YaHei', sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    border: none;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+}
+
+.list-group-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f0f0f0;
+}
+
+.list-group-item.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+#chart-container {
+    min-height: 500px;
+    width: 100%;
+}
+
+footer {
+    border-top: 1px solid #e9ecef;
+    padding-top: 20px;
+    margin-top: 30px;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 图表说明样式 */
+#chart-description {
+    font-size: 0.9rem;
+}
+
+#chart-description h5 {
+    color: #0d6efd;
+    margin-bottom: 8px;
+}
+
+/* 图表类型介绍样式 */
+.card-body h5 {
+    color: #0d6efd;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.card-body p {
+    color: #6c757d;
+    margin-bottom: 16px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    #chart-container {
+        min-height: 300px;
+    }
+}

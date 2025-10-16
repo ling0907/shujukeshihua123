@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互动数据可视化平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --dark-color: #1e1e2e;
+            --light-color: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .navbar {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(10px);
+        }
+        
+        .chart-card {
+            transition: all 0.3s ease;
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        
+        .control-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-type-btn {
+            background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .chart-type-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .chart-type-btn.active {
+            background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
+            box-shadow: 0 0 20px rgba(67, 97, 238, 0.5);
+        }
+        
+        #main-chart {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 600px;
+        }
+        
+        .data-controls {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .slider-container {
+            margin: 15px 0;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .stats-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .animation-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .animated-chart {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="fas fa-chart-line me-2"></i>
+                互动数据可视化平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link active" href="#">首页</a>
+                <a class="nav-link" href="#about">关于</a>
+                <a class="nav-link" href="#contact">联系</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="row">
+            <!-- 左侧控制面板 -->
+            <div class="col-lg-3">
+                <div class="control-panel glass-effect">
+                    <h4 class="text-center mb-4">图表类型</h4>
+                    <div class="d-grid gap-2">
+                        <button class="chart-type-btn active" data-type="line">
+                            📈 折线图
+                        </button>
+                        <button class="chart-type-btn" data-type="distribution">
+                            📊 分布情况
+                        </button>
+                        <button class="chart-type-btn" data-type="pie-donut">
+                            🥧 饼图/环形图
+                        </button>
+                        <button class="chart-type-btn" data-type="scatter">
+                            ⚫ 散点图
+                        </button>
+                        <button class="chart-type-btn" data-type="radar">
+                            🎯 雷达图
+                        </button>
+                        <button class="chart-type-btn" data-type="stacked">
+                            🧱 堆积图
+                        </button>
+                    </div>
+                    <div id="distribution-submenu" style="display:none; margin-top:10px;">
+                        <button class="chart-type-btn" data-type="bar" style="margin:2px; padding:8px 12px;">
+                            ▸ 柱形图
+                        </button>
+                        <button class="chart-type-btn" data-type="barh" style="margin:2px; padding:8px 12px;">
+                            ▸ 条形图
+                        </button>
+                        <button class="chart-type-btn" data-type="histogram" style="margin:2px; padding:8px 12px;">
+                            ▸ 直方图
+                        </button>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5>实时统计</h5>
+                        <div class="stats-card">
+                            <div>数据点数</div>
+                            <div class="stats-value" id="data-points">0</div>
+                            <div>当前图表</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="data-controls glass-effect mt-3">
+                    <h5>数据控制</h5>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>数据规模</span>
+                            <span id="scale-value">100</span>
+                        </div>
+                        <input type="range" class="form-range" id="data-scale" min="10" max="500" value="100">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>复杂度</span>
+                            <span id="complexity-value">5</span>
+                        </div>
+                        <input type="range" class="form-range" id="data-complexity" min="1" max="10" value="5">
+                    </div>
+                    
+                    <div class="animation-controls">
+                        <button class="btn btn-primary btn-sm" id="play-animation">
+                            ▶️ 播放动画
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="reset-chart">
+                            🔄 重置
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主图表区域 -->
+            <div class="col-lg-9">
+                <div class="chart-card glass-effect">
+                    <div class="card-header bg-transparent border-0">
+                        <h3 class="text-center mb-0" id="chart-title">互动数据可视化</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="main-chart" class="animated-chart"></div>
+                    </div>
+                </div>
+                
+                <!-- 迷你图表组 -->
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <div class="chart-card glass-effect">
+                            <div class="card-body text-center">
+                                <canvas id="mini-chart-1" width="200" height="120"></canvas>
+                                <div class="mt-2">趋势分析</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="chart-card glass-effect">
+                            <div class="card-body text-center">
+                                <canvas id="mini-chart-2" width="200" height="120"></canvas>
+                                <div class="mt-2">分布情况</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="chart-card glass-effect">
+                            <div class="card-body text-center">
+                                <canvas id="mini-chart-3" width="200" height="120"></canvas>
+                                <div class="mt-2">实时监控</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class InteractiveVisualization {
+            constructor() {
+                this.currentChartType = 'line';
+                this.dataScale = 100;
+                this.complexity = 5;
+                this.isAnimating = false;
+                this.animationInterval = null;
+                
+                this.initEventListeners();
+                this.generateChart();
+                this.createMiniCharts();
+            }
+            
+            initEventListeners() {
+                // 图表类型切换
+                document.querySelectorAll('.chart-type-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const type = e.target.dataset.type;
+                        
+                        // 处理分布情况子菜单
+                        if (type === 'distribution') {
+                            document.getElementById('distribution-submenu').style.display = 'block';
+                            return;
+                        }
+                        
+                        // 隐藏子菜单当选择其他主菜单时
+                        if (type !== 'bar' && type !== 'barh' && type !== 'histogram') {
+                            document.getElementById('distribution-submenu').style.display = 'none';
+                        }
+                        
+                        // 更新活动按钮状态
+                        document.querySelectorAll('.chart-type-btn').forEach(b => {
+                            if (b.dataset.type === 'distribution' && 
+                                (type === 'bar' || type === 'barh' || type === 'histogram')) {
+                                b.classList.add('active');
+                            } else {
+                                b.classList.remove('active');
+                            }
+                        });
+                        
+                        e.target.classList.add('active');
+                        this.currentChartType = type;
+                        this.generateChart();
+                    });
+                });
+                
+                // 滑块控制
+                document.getElementById('data-scale').addEventListener('input', (e) => {
+                    this.dataScale = parseInt(e.target.value);
+                    document.getElementById('scale-value').textContent = this.dataScale;
+                    this.generateChart();
+                });
+                
+                document.getElementById('data-complexity').addEventListener('input', (e) => {
+                    this.complexity = parseInt(e.target.value);
+                    document.getElementById('complexity-value').textContent = this.complexity;
+                    this.generateChart();
+                });
+                
+                // 动画控制
+                document.getElementById('play-animation').addEventListener('click', () => {
+                    this.toggleAnimation();
+                });
+                
+                document.getElementById('reset-chart').addEventListener('click', () => {
+                    this.resetChart();
+                });
+            }
+            
+            generateChart() {
+                const chartData = this.generateData();
+                document.getElementById('data-points').textContent = chartData.x.length;
+                
+                let layout, data;
+                
+                switch(this.currentChartType) {
+                    case 'line':
+                        data = [{
+                            x: chartData.x,
+                            y: chartData.y,
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            line: { shape: 'spline', width: 3 },
+                            marker: { size: 6 },
+                            name: '数据趋势'
+                        }];
+                        layout = {
+                            title: '动态折线图',
+                            xaxis: { title: '时间序列' },
+                            yaxis: { title: '数值' }
+                        };
+                        break;
+                        
+                    case 'bar':
+                        data = [{
+                            x: chartData.categories,
+                            y: chartData.values,
+                            type: 'bar',
+                            marker: {
+                                color: chartData.values.map(v => this.getColor(v))
+                            }
+                        }];
+                        layout = {
+                            title: '柱形图分析',
+                            xaxis: { title: '类别' },
+                            yaxis: { title: '数值' }
+                        };
+                        break;
+                        
+                    case 'barh':
+                        data = [{
+                            y: chartData.categories,
+                            x: chartData.values,
+                            type: 'bar',
+                            orientation: 'h',
+                            marker: {
+                                color: chartData.values.map(v => this.getColor(v))
+                            }
+                        }];
+                        layout = {
+                            title: '条形图分析',
+                            xaxis: { title: '数值' },
+                            yaxis: { title: '类别', automargin: true },
+                            margin: { l: 150 }
+                        };
+                        break;
+                        
+                    case 'histogram':
+                        data = [{
+                            x: chartData.histogramData,
+                            type: 'histogram',
+                            nbinsx: 20,
+                            marker: {
+                                color: 'rgba(100, 200, 102, 0.7)',
+                                line: {
+                                    color: 'rgba(100, 200, 102, 1)',
+                                    width: 1
+                                }
+                            }
+                        }];
+                        layout = {
+                            title: '直方图分布',
+                            xaxis: { title: '数值区间' },
+                            yaxis: { title: '频率' }
+                        };
+                        break;
+                        
+                    case 'pie-donut':
+                        // 创建饼图和环形图的组合
+                        data = [
+                            {
+                                values: chartData.values,
+                                labels: chartData.categories,
+                                type: 'pie',
+                                hole: 0,
+                                domain: { x: [0, 0.48], y: [0, 1] },
+                                textinfo: 'label+percent',
+                                name: '饼图'
+                            },
+                            {
+                                values: chartData.values,
+                                labels: chartData.categories,
+                                type: 'pie',
+                                hole: 0.6,
+                                domain: { x: [0.52, 1], y: [0, 1] },
+                                textinfo: 'label+percent',
+                                name: '环形图'
+                            }
+                        ];
+                        layout = {
+                            title: '饼图与环形图对比',
+                            grid: { rows: 1, columns: 2, pattern: 'independent' },
+                            showlegend: false
+                        };
+                        break;
+                        
+                    case 'scatter':
+                        data = [{
+                            x: chartData.x,
+                            y: chartData.y,
+                            mode: 'markers',
+                            type: 'scatter',
+                            marker: {
+                                size: 8,
+                                color: chartData.y,
+                                colorscale: 'Viridis',
+                                showscale: true
+                            }
+                        }];
+                        layout = {
+                            title: '散点图分析',
+                            xaxis: { title: 'X轴' },
+                            yaxis: { title: 'Y轴' }
+                        };
+                        break;
+                        
+                    case 'radar':
+                        data = [{
+                            type: 'scatterpolar',
+                            r: [...chartData.values, chartData.values[0]],
+                            theta: [...chartData.categories, chartData.categories[0]],
+                            fill: 'toself',
+                            name: '多维分析'
+                        }];
+                        layout = {
+                            polar: {
+                                radialaxis: {
+                                    visible: true,
+                                    range: [0, Math.max(...chartData.values)]
+                                }
+                            },
+                            title: '雷达图分析'
+                        };
+                        break;
+                        
+
+                    case 'stacked':
+                        const stackedData = [
+                            {
+                                x: chartData.categories,
+                                y: chartData.values.map(v => v * 1.2),
+                                type: 'bar',
+                                name: '系列1',
+                                marker: { color: '#FF6B6B' }
+                            },
+                            {
+                                x: chartData.categories,
+                                y: chartData.values.map(v => v * 0.9),
+                                type: 'bar',
+                                name: '系列2',
+                                marker: { color: '#4ECDC4' }
+                            },
+                            {
+                                x: chartData.categories,
+                                y: chartData.values.map(v => v * 0.6),
+                                type: 'bar',
+                                name: '系列3',
+                                marker: { color: '#45B7D1' }
+                            }
+                        ];
+                        data = stackedData;
+                        layout = {
+                            title: '堆积柱形图',
+                            xaxis: { title: '类别' },
+                            yaxis: { title: '数值' },
+                            barmode: 'stack'
+                        };
+                        break;
+                }
+                
+                Plotly.newPlot('main-chart', data, layout, {
+                    responsive: true,
+                    displayModeBar: true
+                });
+                
+                document.getElementById('chart-title').textContent = 
+                    this.getChartTitle(this.currentChartType);
+            }
+            
+            generateData() {
+                const scale = this.dataScale;
+                const complexity = this.complexity;
+                const dataPoints = Math.max(10, Math.floor(scale / 10));
+                
+                // 生成基础数据
+                const x = Array.from({length: dataPoints}, (_, i) => i);
+                const y = x.map(i => {
+                    const base = Math.sin(i * 0.1 * complexity) * 50;
+                    const noise = (Math.random() - 0.5) * 20 * complexity;
+                    return base + noise + 50;
+                });
+                
+                // 生成分类数据
+                const categories = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].slice(0, Math.min(8, dataPoints));
+                const values = categories.map(() => 50 + Math.random() * 50 * complexity);
+                
+                // 生成直方图数据
+                const histogramData = Array.from({length: 200}, () => {
+                    let u = 0, v = 0;
+                    while (u === 0) u = Math.random();
+                    while (v === 0) v = Math.random();
+                    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v) * complexity;
+                });
+                
+                return { x, y, categories, values, histogramData };
+            }
+            
+            getChartTitle(type) {
+                const titles = {
+                    'line': '📈 动态趋势分析',
+                    'distribution': '📊 分布情况',
+                    'bar': '📊 柱形图分析',
+                    'barh': '📊 条形图分析',
+                    'histogram': '📊 直方图分布',
+                    'pie-donut': '🥧 饼图与环形图对比',
+                    'scatter': '⚫ 相关性分析',
+                    'radar': '🎯 多维评估',
+                    'stacked': '🧱 堆积柱形图'
+                };
+                return titles[type] || '互动数据可视化';
+            }
+            
+            getColor(value) {
+                const colors = [
+                    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+                    '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'
+                ];
+                return colors[Math.floor(value / 15) % colors.length];
+            }
+            
+            createMiniCharts() {
+                this.createMiniLineChart('mini-chart-1');
+                this.createMiniBarChart('mini-chart-2');
+                this.createMiniPieChart('mini-chart-3');
+            }
+            
+            createMiniLineChart(canvasId) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                const data = Array.from({length: 20}, (_, i) => Math.sin(i * 0.3) * 30 + 50);
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map((_, i) => i),
+                        datasets: [{
+                            data: data,
+                            borderColor: '#4361ee',
+                            backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { display: false }, y: { display: false } }
+                    }
+                });
+            }
+            
+            createMiniBarChart(canvasId) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                const data = Array.from({length: 6}, () => Math.random() * 100);
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['A', 'B', 'C', 'D', 'E', 'F'],
+                        datasets: [{
+                            data: data,
+                            backgroundColor: [
+                                '#FF6B6B', '#4ECDC4', '#45B7D1', 
+                                '#96CEB4', '#FFEAA7', '#DDA0DD'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { display: false }, y: { display: false } }
+                    }
+                });
+            }
+            
+            createMiniPieChart(canvasId) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['数据1', '数据2', '数据3'],
+                        datasets: [{
+                            data: [40, 30, 30],
+                            backgroundColor: ['#4361ee', '#3f37c9', '#4895ef']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        cutout: '60%'
+                    }
+                });
+            }
+            
+            toggleAnimation() {
+                if (this.isAnimating) {
+                    this.stopAnimation();
+                    document.getElementById('play-animation').textContent = '▶️ 播放动画';
+                } else {
+                    this.startAnimation();
+                    document.getElementById('play-animation').textContent = '⏸️ 暂停动画';
+                }
+                this.isAnimating = !this.isAnimating;
+            }
+            
+            startAnimation() {
+                let frame = 0;
+                this.animationInterval = setInterval(() => {
+                    frame++;
+                    this.dataScale = 100 + Math.sin(frame * 0.1) * 50;
+                    document.getElementById('data-scale').value = this.dataScale;
+                    document.getElementById('scale-value').textContent = Math.round(this.dataScale);
+                    this.generateChart();
+                }, 200);
+            }
+            
+            stopAnimation() {
+                if (this.animationInterval) {
+                    clearInterval(this.animationInterval);
+                    this.animationInterval = null;
+                }
+            }
+            
+            resetChart() {
+                this.dataScale = 100;
+                this.complexity = 5;
+                document.getElementById('data-scale').value = this.dataScale;
+                document.getElementById('data-complexity').value = this.complexity;
+                document.getElementById('scale-value').textContent = this.dataScale;
+                document.getElementById('complexity-value').textContent = this.complexity;
+                this.generateChart();
+            }
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            const visualization = new InteractiveVisualization();
+            
+            // 添加数据点显示功能
+            document.getElementById('data-points').textContent = 
+                visualization.generateData().x.length;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 图表生成器 - 功能演示</title>
+    <link rel="stylesheet" href="https://unpkg.com/antd@4.24.13/dist/antd.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+        }
+        .feature-list {
+            margin: 16px 0;
+        }
+        .feature-item {
+            margin: 8px 0;
+            padding: 8px;
+            background: #f0f8ff;
+            border-radius: 4px;
+        }
+        .code-block {
+            background: #f6f8fa;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; margin-bottom: 24px;">CSV 图表生成器 - 功能演示</h1>
+        
+        <div class="demo-section">
+            <h2>📊 应用概述</h2>
+            <p>这是一个基于 Python Flask + Ant Design + ECharts 的 CSV 数据可视化应用。</p>
+            
+            <div class="feature-list">
+                <div class="feature-item">✅ 支持上传本地 CSV 文件</div>
+                <div class="feature-item">✅ 自动生成交互式折线图</div>
+                <div class="feature-item">✅ 支持按列筛选数据</div>
+                <div class="feature-item">✅ 使用 Ant Design 现代化 UI</div>
+                <div class="feature-item">✅ 响应式设计，支持移动端</div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🔧 技术栈</h2>
+            <div class="code-block">
+后端: Python Flask, pandas, matplotlib<br>
+前端: HTML5, JavaScript, Ant Design, ECharts<br>
+数据处理: CSV 解析，数据清洗，图表生成
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>📁 项目结构</h2>
+            <div class="code-block">
+miniconda3/<br>
+├── app.py                 # Flask 后端主程序<br>
+├── requirements.txt       # Python 依赖<br>
+├── templates/<br>
+│   └── index.html         # 前端页面模板<br>
+├── static/<br>
+│   ├── css/style.css      # 样式文件<br>
+│   └── js/main.js         # 前端逻辑<br>
+└── static/uploads/        # 文件上传目录
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🚀 核心功能</h2>
+            <h3>1. 文件上传模块</h3>
+            <p>使用 Ant Design Upload 组件，支持拖拽上传，文件格式验证</p>
+            
+            <h3>2. 数据处理模块</h3>
+            <p>pandas 读取 CSV，自动检测日期列，数据清洗和转换</p>
+            
+            <h3>3. 图表生成模块</h3>
+            <p>ECharts 生成交互式折线图，支持缩放、拖拽、数据点提示</p>
+            
+            <h3>4. 筛选交互模块</h3>
+            <p>多列选择器，动态过滤数据，实时更新图表</p>
+        </div>
+
+        <div class="demo-section">
+            <h2>🔍 使用示例</h2>
+            <div class="code-block">
+1. 访问 http://127.0.0.1:5000<br>
+2. 点击上传按钮选择 CSV 文件<br>
+3. 系统自动解析数据并显示预览<br>
+4. 选择要显示的数值列<br>
+5. 点击"生成图表"查看可视化结果<br>
+6. 使用图表交互功能探索数据
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>⚠️ 当前状态</h2>
+            <p style="color: #ff4d4f;">后端 Flask 应用由于 Python 环境配置问题暂时无法启动。</p>
+            <p>前端界面和功能设计已完成，所有代码文件已创建。</p>
+            <p>需要配置正确的 Python 环境后即可正常运行。</p>
+        </div>
+
+        <div class="demo-section">
+            <h2>📋 已创建的文件</h2>
+            <ul>
+                <li>app.py - Flask 后端（包含文件上传、数据处理、API 接口）</li>
+                <li>requirements.txt - Python 依赖配置</li>
+                <li>templates/index.html - 前端页面模板</li>
+                <li>static/js/main.js - 前端 JavaScript 逻辑</li>
+                <li>static/css/style.css - 样式文件</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

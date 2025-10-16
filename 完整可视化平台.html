@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据可视化平台 - 完整版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            margin: 20px auto;
+            padding: 30px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .chart-container {
+            height: 500px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .dataset-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .dataset-card:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), #2980b9);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+            font-weight: 600;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--primary-color);
+            background: #e3f2fd;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        .data-table {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1055;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="fas fa-chart-line me-2"></i>
+                数据可视化平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-user me-2"></i>
+                    独立网页版 - 无需服务器
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- 左侧控制面板 -->
+            <div class="col-lg-4">
+                <div class="main-container">
+                    <h2 class="mb-4 text-center">
+                        <i class="fas fa-sliders-h me-2"></i>
+                        控制面板
+                    </h2>
+                    
+                    <!-- 数据源选择 -->
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <i class="fas fa-database me-2"></i>
+                            数据源选择
+                        </div>
+                        <div class="card-body">
+                            <!-- 预定义数据集 -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">预定义数据集</label>
+                                <div id="dataset-list" class="list-group">
+                                    <!-- 数据集将通过JavaScript动态加载 -->
+                                </div>
+                            </div>
+                            
+                            <!-- 文件上传 -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">上传CSV文件</label>
+                                <div class="file-upload-area" id="file-upload-area">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">拖拽文件到这里或点击选择</p>
+                                    <input type="file" id="file-input" accept=".csv" class="d-none">
+                                    <button class="btn btn-outline-primary" onclick="document.getElementById('file-input').click()">
+                                        <i class="fas fa-upload me-2"></i>
+                                        选择文件
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 图表配置 -->
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            图表配置
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">图表类型</label>
+                                <select class="form-select" id="chart-type">
+                                    <option value="折线图">📈 折线图</option>
+                                    <option value="柱状图">📊 柱状图</option>
+                                    <option value="饼图">🥧 饼图</option>
+                                    <option value="散点图">🔵 散点图</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">X轴数据</label>
+                                <select class="form-select" id="x-axis">
+                                    <option value="">请先选择数据源</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Y轴数据</label>
+                                <select class="form-select" id="y-axis">
+                                    <option value="">请先选择数据源</option>
+                                </select>
+                            </div>
+                            
+                            <button class="btn btn-primary w-100" onclick="generateChart()">
+                                <i class="fas fa-magic me-2"></i>
+                                生成图表
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据预览 -->
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <i class="fas fa-table me-2"></i>
+                            数据预览
+                        </div>
+                        <div class="card-body">
+                            <div class="data-table">
+                                <table class="table table-sm table-striped" id="data-preview">
+                                    <thead>
+                                        <tr>
+                                            <th>列名</th>
+                                            <th>类型</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="preview-body">
+                                        <!-- 数据将通过JavaScript动态加载 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧图表展示 -->
+            <div class="col-lg-8">
+                <div class="main-container">
+                    <h2 class="mb-4 text-center">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        图表展示
+                    </h2>
+                    
+                    <!-- 图表容器 -->
+                    <div class="chart-container" id="chart-container">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-chart-bar fa-4x mb-3"></i>
+                            <p>请选择数据源并配置图表参数</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据统计 -->
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <div class="stats-card">
+                                <i class="fas fa-database feature-icon"></i>
+                                <h5 id="data-rows">0</h5>
+                                <p>数据行数</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stats-card">
+                                <i class="fas fa-columns feature-icon"></i>
+                                <h5 id="data-cols">0</h5>
+                                <p>数据列数</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stats-card">
+                                <i class="fas fa-chart-line feature-icon"></i>
+                                <h5 id="chart-type-display">-</h5>
+                                <p>当前图表类型</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息提示容器 -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // 预定义数据集
+        const PREDEFINED_DATASETS = {
+            '气温数据': {
+                filename: '气温数据.csv',
+                data: `天数,最高气温,最低气温
+4,32,19
+5,33,19
+6,34,20
+7,34,22
+8,33,22
+9,31,21
+10,30,22
+11,29,16
+12,30,18
+13,29,18
+14,26,17
+15,23,14
+16,21,15
+17,25,16
+18,31,16`,
+                description: '未来15天最高气温和最低气温数据'
+            },
+            '阿里巴巴GMV数据': {
+                filename: '阿里巴巴GMV数据.csv',
+                data: `财年,GMV(亿元)
+FY2013,10770
+FY2014,16780
+FY2015,24440
+FY2016,30920
+FY2017,37670
+FY2018,48200
+FY2019,57270`,
+                description: '2013-2019财年阿里巴巴GMV数据'
+            },
+            '网购替代率数据': {
+                filename: '网购替代率数据.csv',
+                data: `商品种类,替代率
+家政、家教、保姆等生活服务,0.959
+飞机票、火车票,0.951
+家具,0.935
+手机、手机配件,0.924
+计算机及其配套产品,0.893
+汽车用品,0.892
+通信充值、游戏充值,0.865
+个人护理用品,0.863
+书报杂志及音像制品,0.860
+餐饮、旅游、住宿,0.856
+家用电器,0.854
+食品、饮料、烟酒、保健品,0.835
+家庭日杂用品,0.826
+保险、演出票务,0.816
+服装、鞋帽、家用纺织品,0.798
+数码产品,0.765
+其他商品和服务,0.763
+工艺品、收藏品,0.670`,
+                description: '各商品种类网购替代率数据'
+            },
+            '物流费用数据': {
+                filename: '物流费用数据.csv',
+                data: `月份,公司A费用,公司B费用,公司C费用
+1,198,203,185
+2,215,236,205
+3,245,200,226
+4,222,236,199
+5,200,269,238
+6,236,216,200
+7,201,298,250
+8,253,333,209
+9,236,301,246
+10,200,349,219
+11,266,360,253
+12,290,368,288`,
+                description: '三家物流公司月度费用数据'
+            },
+            '汽车速度制动距离数据': {
+                filename: '汽车速度制动距离数据.csv',
+                data: `速度(km/h),制动距离(m)
+10,0.5
+20,2.0
+30,4.4
+40,7.9
+50,12.3
+60,17.7
+70,24.1
+80,31.5
+90,39.9
+100,49.2
+110,59.5
+120,70.8
+130,83.1
+140,96.4
+150,110.7
+160,126.0
+170,142.2
+180,159.4
+190,177.6
+200,196.8`,
+                description: '汽车速度与制动距离关系数据'
+            }
+        };
+
+        // 全局变量
+        let currentData = null;
+        let chartInstance = null;
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDatasets();
+            setupEventListeners();
+            showToast('欢迎使用数据可视化平台！', 'success');
+        });
+        
+        // 加载预定义数据集
+        function loadDatasets() {
+            const datasetList = document.getElementById('dataset-list');
+            datasetList.innerHTML = '';
+            
+            Object.keys(PREDEFINED_DATASETS).forEach(datasetName => {
+                const dataset = PREDEFINED_DATASETS[datasetName];
+                const datasetItem = document.createElement('div');
+                datasetItem.className = 'list-group-item dataset-card';
+                datasetItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${datasetName}</h6>
+                            <small class="text-muted">${dataset.description}</small>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                `;
+                datasetItem.addEventListener('click', () => loadDataset(datasetName));
+                datasetList.appendChild(datasetItem);
+            });
+        }
+        
+        // 加载特定数据集
+        function loadDataset(datasetName) {
+            if (!PREDEFINED_DATASETS[datasetName]) {
+                showToast('数据集不存在', 'error');
+                return;
+            }
+            
+            const csvData = PREDEFINED_DATASETS[datasetName].data;
+            const parsedData = parseCSVData(csvData);
+            
+            currentData = parsedData;
+            updateDataControls(parsedData);
+            updateStats(parsedData);
+            
+            showToast(`已加载数据集: ${datasetName}`, 'success');
+        }
+        
+        // 解析CSV数据
+        function parseCSVData(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) {
+                return { headers: [], data: [] };
+            }
+            
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line) {
+                    const values = line.split(',').map(v => v.trim());
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        if (index < values.length) {
+                            // 尝试转换为数字
+                            const numValue = parseFloat(values[index]);
+                            row[header] = isNaN(numValue) ? values[index] : numValue;
+                        } else {
+                            row[header] = null;
+                        }
+                    });
+                    data.push(row);
+                }
+            }
+            
+            return { headers, data };
+        }
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 文件上传处理
+            const fileInput = document.getElementById('file-input');
+            const uploadArea = document.getElementById('file-upload-area');
+            
+            fileInput.addEventListener('change', handleFileUpload);
+            
+            // 拖拽上传
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#3498db';
+                uploadArea.style.background = '#e3f2fd';
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.borderColor = '#ddd';
+                uploadArea.style.background = '#f8f9fa';
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#ddd';
+                uploadArea.style.background = '#f8f9fa';
+                
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileUpload();
+                }
+            });
+        }
+        
+        // 处理文件上传
+        function handleFileUpload() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showToast('请选择CSV文件', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const csvData = e.target.result;
+                    const parsedData = parseCSVData(csvData);
+                    
+                    currentData = parsedData;
+                    updateDataControls(parsedData);
+                    updateStats(parsedData);
+                    
+                    showToast('文件上传成功！', 'success');
+                } catch (error) {
+                    console.error('文件解析错误:', error);
+                    showToast('文件解析失败', 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                showToast('文件读取失败', 'error');
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // 更新数据控件
+        function updateDataControls(data) {
+            const xAxisSelect = document.getElementById('x-axis');
+            const yAxisSelect = document.getElementById('y-axis');
+            const previewBody = document.getElementById('preview-body');
+            
+            // 清空现有选项
+            xAxisSelect.innerHTML = '';
+            yAxisSelect.innerHTML = '';
+            previewBody.innerHTML = '';
+            
+            // 添加新的选项
+            data.headers.forEach(header => {
+                const option1 = new Option(header, header);
+                const option2 = new Option(header, header);
+                xAxisSelect.add(option1);
+                yAxisSelect.add(option2);
+                
+                // 添加到数据预览
+                const row = previewBody.insertRow();
+                row.insertCell(0).textContent = header;
+                row.insertCell(1).textContent = '文本/数值';
+            });
+            
+            // 设置默认选择
+            if (data.headers.length > 0) {
+                xAxisSelect.value = data.headers[0];
+                if (data.headers.length > 1) {
+                    yAxisSelect.value = data.headers[1];
+                }
+            }
+        }
+        
+        // 更新统计信息
+        function updateStats(data) {
+            document.getElementById('data-rows').textContent = data.data ? data.data.length : 0;
+            document.getElementById('data-cols').textContent = data.headers ? data.headers.length : 0;
+            document.getElementById('chart-type-display').textContent = 
+                document.getElementById('chart-type').value;
+        }
+        
+        // 生成图表
+        function generateChart() {
+            if (!currentData) {
+                showToast('请先选择数据源', 'error');
+                return;
+            }
+            
+            const chartType = document.getElementById('chart-type').value;
+            const xAxis = document.getElementById('x-axis').value;
+            const yAxis = document.getElementById('y-axis').value;
+            
+            if (!xAxis || !yAxis) {
+                showToast('请选择X轴和Y轴数据', 'error');
+                return;
+            }
+            
+            const chartConfig = generateChartConfig(chartType, currentData.data, xAxis, yAxis);
+            if (chartConfig) {
+                renderChart(chartConfig);
+                updateStats(currentData);
+                showToast('图表生成成功！', 'success');
+            } else {
+                showToast('生成图表配置失败', 'error');
+            }
+        }
+        
+        // 生成图表配置
+        function generateChartConfig(chartType, data, xAxis, yAxis) {
+            if (!data || !xAxis || !yAxis) return null;
+            
+            const config = {
+                title: {
+                    text: `${chartType} - ${xAxis} vs ${yAxis}`,
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                toolbox: {
+                    feature: {
+                        saveAsImage: {
+                            title: '保存为图片'
+                        }
+                    }
+                }
+            };
+            
+            switch(chartType) {
+                case '折线图':
+                    config.xAxis = {
+                        type: 'category',
+                        data: data.map(item => String(item[xAxis] || ''))
+                    };
+                    config.yAxis = { type: 'value' };
+                    config.series = [{
+                        name: yAxis,
+                        type: 'line',
+                        data: data.map(item => item[yAxis]),
+                        smooth: true
+                    }];
+                    break;
+                    
+                case '柱状图':
+                    config.xAxis = {
+                        type: 'category',
+                        data: data.map(item => String(item[xAxis] || ''))
+                    };
+                    config.yAxis = { type: 'value' };
+                    config.series = [{
+                        name: yAxis,
+                        type: 'bar',
+                        data: data.map(item => item[yAxis])
+                    }];
+                    break;
+                    
+                case '饼图':
+                    config.series = [{
+                        type: 'pie',
+                        radius: '50%',
+                        data: data.map(item => ({
+                            name: String(item[xAxis] || ''),
+                            value: item[yAxis]
+                        })).filter(d => d.value != null),
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }];
+                    break;
+                    
+                case '散点图':
+                    config.xAxis = { type: 'value' };
+                    config.yAxis = { type: 'value' };
+                    config.series = [{
+                        type: 'scatter',
+                        data: data.map(item => [item[xAxis], item[yAxis]]).filter(d => d[0] != null && d[1] != null),
+                        symbolSize: 20
+                    }];
+                    break;
+            }
+            
+            return config;
+        }
+        
+        // 渲染图表
+        function renderChart(config) {
+            const chartContainer = document.getElementById('chart-container');
+            chartContainer.innerHTML = '';
+            
+            const chartDiv = document.createElement('div');
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '100%';
+            chartContainer.appendChild(chartDiv);
+            
+            chartInstance = echarts.init(chartDiv);
+            chartInstance.setOption(config);
+            
+            // 响应窗口大小变化
+            window.addEventListener('resize', function() {
+                chartInstance.resize();
+            });
+        }
+        
+        // 显示消息提示
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toast-container');
+            const toastId = 'toast-' + Date.now();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+    </script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

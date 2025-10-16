@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 图表生成器 - 独立版</title>
+    <link rel="stylesheet" href="https://unpkg.com/antd@4.24.13/dist/antd.min.css">
+    <script src="https://unpkg.com/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .upload-section {
+            background: #f8f9fa;
+            border: 3px dashed #d9d9d9;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-section:hover {
+            border-color: #1890ff;
+            background: #f0f8ff;
+        }
+        
+        .upload-section.dragover {
+            border-color: #52c41a;
+            background: #f6ffed;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #1890ff;
+            margin-bottom: 20px;
+        }
+        
+        .upload-text {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+            border: none;
+            color: white;
+            padding: 12px 32px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(82, 196, 26, 0.3);
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(82, 196, 26, 0.4);
+        }
+        
+        .preview-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            color: #1890ff;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .preview-table {
+            max-height: 300px;
+            overflow: auto;
+            border: 1px solid #f0f0f0;
+            border-radius: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+        
+        .filter-controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .column-selector {
+            min-width: 300px;
+        }
+        
+        .generate-btn {
+            background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+            border: none;
+            color: white;
+            padding: 12px 32px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 77, 79, 0.3);
+        }
+        
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 77, 79, 0.4);
+        }
+        
+        .chart-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+        
+        .chart-container {
+            width: 100%;
+            height: 600px;
+            margin-top: 20px;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+        
+        .status-error {
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #ff4d4f;
+        }
+        
+        .status-info {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            color: #1890ff;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .column-selector {
+                min-width: auto;
+            }
+            
+            .chart-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 CSV 图表生成器</h1>
+            <p>上传 CSV 文件，自动生成交互式折线图</p>
+        </div>
+        
+        <div class="content">
+            <!-- 文件上传区域 -->
+            <div class="upload-section" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">
+                    <p>拖拽 CSV 文件到此处，或点击选择文件</p>
+                    <p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.7;">
+                        支持格式：.csv 文件，最大 10MB
+                    </p>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept=".csv">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    选择 CSV 文件
+                </button>
+            </div>
+            
+            <!-- 状态消息区域 -->
+            <div id="statusMessage"></div>
+            
+            <!-- 数据预览区域 -->
+            <div class="preview-section" id="previewSection">
+                <h3 class="section-title">📋 数据预览</h3>
+                <div class="preview-table" id="previewTable"></div>
+            </div>
+            
+            <!-- 筛选配置区域 -->
+            <div class="filter-section" id="filterSection">
+                <h3 class="section-title">⚙️ 图表配置</h3>
+                <div class="filter-controls">
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            选择要显示的数值列：
+                        </label>
+                        <div id="columnSelector" class="column-selector"></div>
+                    </div>
+                    <button class="generate-btn" onclick="generateChart()">
+                        📈 生成图表
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 图表展示区域 -->
+            <div class="chart-section" id="chartSection">
+                <h3 class="section-title">📊 图表展示</h3>
+                <div class="chart-container" id="chartContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化变量
+        let currentData = null;
+        let chartInstance = null;
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeUploadArea();
+            initializeFileInput();
+        });
+        
+        // 初始化上传区域拖拽功能
+        function initializeUploadArea() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            // 拖拽事件处理
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect(files[0]);
+                }
+            });
+        }
+        
+        // 初始化文件输入
+        function initializeFileInput() {
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', function(e) {
+                if (this.files.length > 0) {
+                    handleFileSelect(this.files[0]);
+                }
+            });
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showStatus('请选择 CSV 文件', 'error');
+                return;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) {
+                showStatus('文件大小不能超过 10MB', 'error');
+                return;
+            }
+            
+            showStatus('正在解析文件...', 'info');
+            
+            Papa.parse(file, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        showStatus('文件解析错误: ' + results.errors[0].message, 'error');
+                        return;
+                    }
+                    
+                    if (results.data.length === 0) {
+                        showStatus('文件为空或格式不正确', 'error');
+                        return;
+                    }
+                    
+                    currentData = {
+                        filename: file.name,
+                        data: results.data,
+                        columns: results.meta.fields,
+                        numericColumns: detectNumericColumns(results.data, results.meta.fields)
+                    };
+                    
+                    showStatus('文件解析成功！', 'success');
+                    showDataPreview();
+                    setupColumnSelector();
+                },
+                error: function(error) {
+                    showStatus('文件读取错误: ' + error.message, 'error');
+                }
+            });
+        }
+        
+        // 检测数值列
+        function detectNumericColumns(data, columns) {
+            const numericColumns = [];
+            
+            columns.forEach(column => {
+                // 检查前10行数据，判断是否为数值列
+                const sampleValues = data.slice(0, 10).map(row => row[column]);
+                const numericCount = sampleValues.filter(val => 
+                    val !== null && val !== undefined && !isNaN(val) && typeof val === 'number'
+                ).length;
+                
+                if (numericCount >= 5) { // 至少5个数值才认为是数值列
+                    numericColumns.push(column);
+                }
+            });
+            
+            return numericColumns;
+        }
+        
+        // 显示数据预览
+        function showDataPreview() {
+            const previewSection = document.getElementById('previewSection');
+            const previewTable = document.getElementById('previewTable');
+            const filterSection = document.getElementById('filterSection');
+            
+            // 显示预览区域
+            previewSection.style.display = 'block';
+            filterSection.style.display = 'block';
+            
+            // 生成预览表格
+            let tableHtml = '<table><thead><tr>';
+            
+            // 表头
+            currentData.columns.forEach(column => {
+                tableHtml += `<th>${column}</th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+            
+            // 数据行（最多显示20行）
+            currentData.data.slice(0, 20).forEach(row => {
+                tableHtml += '<tr>';
+                currentData.columns.forEach(column => {
+                    const value = row[column];
+                    tableHtml += `<td>${value !== null && value !== undefined ? value : ''}</td>`;
+                });
+                tableHtml += '</tr>';
+            });
+            
+            tableHtml += '</tbody></table>';
+            previewTable.innerHTML = tableHtml;
+        }
+        
+        // 设置列选择器
+        function setupColumnSelector() {
+            const columnSelector = document.getElementById('columnSelector');
+            columnSelector.innerHTML = '';
+            
+            currentData.numericColumns.forEach(column => {
+                const checkboxId = `column-${column}`;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = checkboxId;
+                checkbox.value = column;
+                checkbox.checked = true;
+                
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+                label.textContent = column;
+                label.style.marginLeft = '8px';
+                label.style.marginRight = '20px';
+                label.style.cursor = 'pointer';
+                
+                columnSelector.appendChild(checkbox);
+                columnSelector.appendChild(label);
+            });
+        }
+        
+        // 生成图表
+        function generateChart() {
+            const selectedColumns = Array.from(document.querySelectorAll('#columnSelector input:checked'))
+                .map(checkbox => checkbox.value);
+            
+            if (selectedColumns.length === 0) {
+                showStatus('请至少选择一个数值列', 'error');
+                return;
+            }
+            
+            showStatus('正在生成图表...', 'info');
+            
+            // 准备图表数据
+            const chartData = prepareChartData(selectedColumns);
+            
+            // 显示图表区域
+            const chartSection = document.getElementById('chartSection');
+            chartSection.style.display = 'block';
+            
+            // 渲染图表
+            renderChart(chartData);
+            
+            showStatus('图表生成成功！', 'success');
+        }
+        
+        // 准备图表数据
+        function prepareChartData(selectedColumns) {
+            const xData = currentData.data.map((_, index) => index + 1);
+            const seriesData = [];
+            
+            selectedColumns.forEach(column => {
+                const columnData = currentData.data.map(row => row[column]);
+                seriesData.push({
+                    name: column,
+                    type: 'line',
+                    data: columnData,
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    lineStyle: {
+                        width: 3
+                    }
+                });
+            });
+            
+            return {
+                xAxis: xData,
+                series: seriesData
+            };
+        }
+        
+        // 渲染图表
+        function renderChart(chartData) {
+            const chartContainer = document.getElementById('chartContainer');
+            
+            // 初始化图表实例
+            if (chartInstance) {
+                chartInstance.dispose();
+            }
+            
+            chartInstance = echarts.init(chartContainer);
+            
+            // 图表配置
+            const option = {
+                title: {
+                    text: 'CSV 数据折线图',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 18,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    borderWidth: 0,
+                    textStyle: {
+                        color: '#fff'
+                    }
+                },
+                legend: {
+                    data: chartData.series.map(s => s.name),
+                    top: 30,
+                    textStyle: {
+                        fontSize: 12
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    top: '15%',
+                    containLabel: true
+                },
+                toolbox: {
+                    feature: {
+                        saveAsImage: {
+                            title: '保存图片',
+                            pixelRatio: 2
+                        },
+                        dataZoom: {
+                            title: {
+                                zoom: '区域缩放',
+                                back: '区域缩放还原'
+                            }
+                        },
+                        restore: {
+                            title: '还原'
+                        }
+                    },
+                    right: 20,
+                    top: 20
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: chartData.xAxis,
+                    axisLine: {
+                        lineStyle: {
+                            color: '#ccc'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#666'
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLine: {
+                        lineStyle: {
+                            color: '#ccc'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#666',
+                        formatter: function(value) {
+                            if (value >= 1000000) {
+                                return (value / 1000000).toFixed(1) + 'M';
+                            } else if (value >= 1000) {
+                                return (value / 1000).toFixed(1) + 'K';
+                            }
+                            return value;
+                        }
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: '#f0f0f0',
+                            type: 'dashed'
+                        }
+                    }
+                },
+                series: chartData.series,
+                dataZoom: [
+                    {
+                        type: 'inside',
+                        start: 0,
+                        end: 100
+                    },
+                    {
+                        start: 0,
+                        end: 100,
+                        handleSize: '80%',
+                        handleStyle: {
+                            color: '#fff',
+                            shadowBlur: 3,
+                            shadowColor: 'rgba(0, 0, 0, 0.6)',
+                            shadowOffsetX: 2,
+                            shadowOffsetY: 2
+                        }
+                    }
+                ]
+            };
+            
+            // 设置图表选项
+            chartInstance.setOption(option);
+            
+            // 响应窗口大小变化
+            window.addEventListener('resize', function() {
+                chartInstance.resize();
+            });
+        }
+        
+        // 显示状态消息
+        function showStatus(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.innerHTML = `
+                <div class="status-message status-${type}">
+                    ${message}
+                </div>
+            `;
+            
+            // 3秒后自动清除成功和信息消息
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusMessage.innerHTML = '';
+                }, 3000);
+            }
+        }
+        
+        // 示例数据加载（可选）
+        function loadSampleData() {
+            const sampleData = `name,pop,lat,lon
+New York,8287238,40.7305991,-73.9865812
+Los Angeles,3826423,34.053717,-118.2427266
+Chicago,2705627,41.8755546,-87.6244212
+Houston,2129784,29.7589382,-95.3676974
+Phoenix,1469475,33.4485865,-112.0773456
+Philadelphia,1526006,39.9527237,-75.1635262
+San Antonio,1327407,29.4246002,-98.4951405
+San Diego,1307402,32.715738,-117.1610838
+Dallas,1223229,32.8203525,-96.8717036
+San Jose,945942,37.338475,-121.885794`;
+            
+            const blob = new Blob([sampleData], { type: 'text/csv' });
+            const file = new File([blob], 'sample_cities.csv', { type: 'text/csv' });
+            handleFileSelect(file);
+        }
+        
+        // 页面加载完成后可选加载示例数据
+        setTimeout(() => {
+            // 注释掉下面这行可以禁用自动加载示例数据
+            // loadSampleData();
+        }, 1000);
+    </script>
+</body>
+</html>
